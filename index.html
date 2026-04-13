@@ -18,7 +18,7 @@
             --accent-green-dim: rgba(0, 255, 136, 0.2);
             --text-color: #e0faff;
             --footer-bg: rgba(0, 40, 60, 0.4);
-            --scanner-size: 450px;
+            --scanner-size: min(85vw, 75vh, 650px);
         }
 
         /* Prevent standard cursor to make it feel like a dedicated kiosk app */
@@ -95,23 +95,23 @@
         .ring-2 { width: 85%; height: 85%; border-left: 2px solid var(--accent-blue); border-right: 2px solid var(--accent-blue); animation-direction: reverse; animation-duration: 20s; }
 
         .handprint-container {
-            width: 70%; height: 70%;
+            width: 95%; height: 95%;
             position: relative;
             display: flex; justify-content: center; align-items: center;
             background: transparent;
             /* Sharp circular mask to clip the square edges */
-            -webkit-mask-image: radial-gradient(circle at center, black 65%, transparent 70%);
-            mask-image: radial-gradient(circle at center, black 65%, transparent 70%);
+            -webkit-mask-image: radial-gradient(circle at center, black 80%, transparent 85%);
+            mask-image: radial-gradient(circle at center, black 80%, transparent 85%);
             overflow: hidden;
+            mix-blend-mode: screen; /* Now properly blending with the parent background */
         }
 
         .hand-image {
             width: 100%; height: 100%;
             object-fit: contain;
-            mix-blend-mode: screen; 
-            /* High contrast pushes dark-grey background to true black, making it invisible with 'screen' blend mode */
-            filter: contrast(2.5) brightness(1.1) drop-shadow(0 0 15px var(--accent-blue));
-            opacity: 0.9;
+            /* Screen mode moved to container for proper alpha handling */
+            filter: contrast(15) brightness(0.65) grayscale(1) drop-shadow(0 0 20px var(--accent-blue));
+            opacity: 0.95;
             transition: all 0.5s ease;
         }
 
@@ -127,7 +127,7 @@
         body.scanning .scan-bar { opacity: 1; animation: scan 3.5s linear infinite; }
         body.scanning .hand-image { opacity: 1; filter: brightness(1.7) contrast(1.5) drop-shadow(0 0 45px var(--accent-blue)); }
         body.scanning .scanner-ring { animation-duration: 4s; border-color: var(--accent-blue); }
-        body.scanning .scanner-wrap { transform: scale(1.1); }
+        body.scanning .scanner-wrap { transform: scale(1.15); }
 
         body.authorized { --accent-blue: var(--accent-green); --accent-blue-dim: var(--accent-green-dim); }
 
@@ -155,12 +155,55 @@
         #reset-hint { position: fixed; bottom: 20px; right: 20px; font-size: 0.7rem; color: var(--accent-blue-dim); opacity: 0.2; }
         
         .hidden { display: none; }
+
+        /* Fullscreen Button Styles */
+        .fs-btn {
+            background: transparent;
+            border: 1px solid var(--accent-blue-dim);
+            color: var(--accent-blue);
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto; /* Override global cursor none */
+        }
+
+        .fs-btn:hover {
+            background: var(--accent-blue-dim);
+            box-shadow: 0 0 15px var(--accent-blue-dim);
+        }
+
+        .fs-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+        @media (max-width: 800px), (orientation: portrait) {
+            :root { --scanner-size: min(95vw, 72vh, 700px); }
+            .container { padding: 15px; }
+            .glitch-text { font-size: 1.1rem; letter-spacing: 2px; }
+            .msg-content h1 { font-size: 3.5rem; letter-spacing: 10px; }
+            .msg-content p { font-size: 0.9rem; letter-spacing: 6px; }
+            .data-stream { gap: 8px; font-size: 0.55rem; flex-wrap: wrap; justify-content: center; }
+            .system-status { font-size: 0.75rem; }
+            header { flex-direction: column; gap: 8px; align-items: flex-start; }
+            .header-top { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+            .instructions { bottom: -45px; font-size: 0.8rem; }
+            footer { padding-top: 8px; }
+        }
     </style>
 </head>
 <body class="idle">
     <div class="container" id="app">
         <header>
-            <div class="glitch-text">BIOMETRIC TERMINAL v4.0</div>
+            <div class="header-top">
+                <div class="glitch-text">BIOMETRIC TERMINAL v4.0</div>
+                <button id="fs-toggle" class="fs-btn">
+                    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                    <span>FULLSCREEN</span>
+                </button>
+            </div>
             <div class="system-status">
                 <span class="status-dot"></span>
                 <span id="status-text">WAITING FOR OPERATOR...</span>
@@ -267,12 +310,24 @@
             document.addEventListener('keydown', (e) => {
                 const key = e.key.toLowerCase();
                 // F for Fullscreen
-                if (key === 'f') {
-                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-                    else if (document.exitFullscreen) document.exitFullscreen();
-                }
+                if (key === 'f') toggleFullscreen();
                 // R for Reset
                 if (key === 'r') resetApp();
+            });
+
+            const toggleFullscreen = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
+                    });
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                }
+            };
+
+            document.getElementById('fs-toggle').addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen();
             });
             
             // Hidden corner reset (Top Left 3 clicks)
