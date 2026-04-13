@@ -1,0 +1,17 @@
+{
+  "name": "Biometric Scan Ceremony",
+  "short_name": "Biometric ID",
+  "description": "Handprint scanner app for event opening ceremonies.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#050a14",
+  "theme_color": "#00f2ff",
+  "icons": [
+    {
+      "src": "assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

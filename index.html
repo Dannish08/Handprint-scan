@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handprint Biometric Scanner | Opening Ceremony</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- PWA & iOS optimization -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/icon.png">
+    <meta name="theme-color" content="#050a14">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        :root {
+            --bg-color: #050a14;
+            --accent-blue: #00f2ff;
+            --accent-blue-dim: rgba(0, 242, 255, 0.2);
+            --accent-green: #00ff88;
+            --accent-green-dim: rgba(0, 255, 136, 0.2);
+            --text-color: #e0faff;
+            --footer-bg: rgba(0, 40, 60, 0.4);
+            --scanner-size: 450px;
+        }
+
+        /* Prevent standard cursor to make it feel like a dedicated kiosk app */
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Orbitron', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            /* Safe Area Support for iPad status bar */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* Subtle scanlines effect for CRT/Futuristic feel */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .container {
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: space-between;
+            padding: 40px; position: relative;
+            border: 2px solid var(--accent-blue-dim);
+            box-shadow: inset 0 0 100px rgba(0, 242, 255, 0.05);
+        }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--accent-blue-dim); padding-bottom: 20px;
+        }
+
+        .glitch-text {
+            font-size: 1.5rem; font-weight: 900; letter-spacing: 5px;
+            color: var(--accent-blue);
+            text-shadow: 0 0 10px var(--accent-blue);
+        }
+
+        .system-status {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 15px;
+        }
+
+        .status-dot {
+            width: 12px; height: 12px; background-color: var(--accent-blue);
+            border-radius: 50%; box-shadow: 0 0 10px var(--accent-blue);
+            animation: blink 1s infinite;
+        }
+
+        main { flex: 1; display: flex; justify-content: center; align-items: center; }
+
+        .scanner-wrap {
+            position: relative; width: var(--scanner-size); height: var(--scanner-size);
+            display: flex; justify-content: center; align-items: center;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .scanner-ring {
+            position: absolute; border: 2px solid var(--accent-blue-dim);
+            border-radius: 50%; animation: rotate 15s linear infinite;
+        }
+
+        .ring-1 { width: 100%; height: 100%; border-top: 3px solid var(--accent-blue); border-bottom: 3px solid var(--accent-blue); }
+        .ring-2 { width: 85%; height: 85%; border-left: 2px solid var(--accent-blue); border-right: 2px solid var(--accent-blue); animation-direction: reverse; animation-duration: 20s; }
+
+        .handprint-container {
+            width: 70%; height: 70%;
+            position: relative;
+            display: flex; justify-content: center; align-items: center;
+            background: transparent;
+            /* Sharp circular mask to clip the square edges */
+            -webkit-mask-image: radial-gradient(circle at center, black 65%, transparent 70%);
+            mask-image: radial-gradient(circle at center, black 65%, transparent 70%);
+            overflow: hidden;
+        }
+
+        .hand-image {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            mix-blend-mode: screen; 
+            /* High contrast pushes dark-grey background to true black, making it invisible with 'screen' blend mode */
+            filter: contrast(2.5) brightness(1.1) drop-shadow(0 0 15px var(--accent-blue));
+            opacity: 0.9;
+            transition: all 0.5s ease;
+        }
+
+        .scan-bar {
+            position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+            background: var(--accent-blue);
+            box-shadow: 0 0 25px var(--accent-blue), 0 0 50px var(--accent-blue);
+            opacity: 0; z-index: 10;
+            border-radius: 6px;
+        }
+
+        /* Interactive States */
+        body.scanning .scan-bar { opacity: 1; animation: scan 3.5s linear infinite; }
+        body.scanning .hand-image { opacity: 1; filter: brightness(1.7) contrast(1.5) drop-shadow(0 0 45px var(--accent-blue)); }
+        body.scanning .scanner-ring { animation-duration: 4s; border-color: var(--accent-blue); }
+        body.scanning .scanner-wrap { transform: scale(1.1); }
+
+        body.authorized { --accent-blue: var(--accent-green); --accent-blue-dim: var(--accent-green-dim); }
+
+        .authorized-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 10, 5, 0.99); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: opacity 1.2s ease;
+        }
+
+        .authorized-overlay.visible { opacity: 1; visibility: visible; }
+        .msg-content { text-align: center; }
+        .msg-content h1 { font-size: 6rem; letter-spacing: 20px; color: var(--accent-green); text-shadow: 0 0 50px var(--accent-green); font-weight: 900; }
+        .msg-content p { color: var(--accent-green); font-size: 1.2rem; letter-spacing: 12px; margin-top: 30px; opacity: 0.9; }
+
+        footer { display: flex; justify-content: center; padding-top: 20px; border-top: 2px solid var(--accent-blue-dim); }
+        .data-stream { display: flex; gap: 50px; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--accent-blue-dim); letter-spacing: 2px; }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+
+        .instructions { position: absolute; bottom: -80px; width: 100%; text-align: center; font-size: 1rem; letter-spacing: 5px; opacity: 0.6; font-weight: bold; }
+        
+        #reset-hint { position: fixed; bottom: 20px; right: 20px; font-size: 0.7rem; color: var(--accent-blue-dim); opacity: 0.2; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="idle">
+    <div class="container" id="app">
+        <header>
+            <div class="glitch-text">BIOMETRIC TERMINAL v4.0</div>
+            <div class="system-status">
+                <span class="status-dot"></span>
+                <span id="status-text">WAITING FOR OPERATOR...</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="scanner-wrap" id="scanner">
+                <div class="scanner-ring ring-1"></div>
+                <div class="scanner-ring ring-2"></div>
+                
+                <div class="handprint-container">
+                    <img src="assets/handprint.png" alt="Biometric Target" class="hand-image">
+                    <div class="scan-bar"></div>
+                </div>
+
+                <div class="instructions">
+                    <p>PLACE HAND TO COMMENCE</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="data-stream">
+                <div>SYSTEM_STABILITY: 100%</div>
+                <div>AUT_LVL: SUPREME</div>
+                <div>READY_FOR_DEPLOY: TRUE</div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Final State Overlay -->
+    <div id="authorized-msg" class="authorized-overlay hidden">
+        <div class="msg-content">
+            <h1>AUTHORIZED</h1>
+            <p>COMMENCE OPENING CEREMONY</p>
+        </div>
+    </div>
+
+    <!-- Interface Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+            const scanner = document.getElementById('scanner');
+            const statusText = document.getElementById('status-text');
+            const authOverlay = document.getElementById('authorized-msg');
+            
+            let scanTimeout;
+            const scanDuration = 4500; // 4.5 seconds for dramatic tension
+            let isScanning = false;
+
+            const startScan = (e) => {
+                if (body.classList.contains('authorized') || isScanning) return;
+                
+                isScanning = true;
+                body.classList.remove('idle');
+                body.classList.add('scanning');
+                statusText.innerText = 'CALIBRATING SCANNER... ANALYZING BIOMETRICS';
+                
+                scanTimeout = setTimeout(completeScan, scanDuration);
+            };
+
+            const cancelScan = () => {
+                if (!isScanning || body.classList.contains('authorized')) return;
+                
+                clearTimeout(scanTimeout);
+                isScanning = false;
+                body.classList.remove('scanning');
+                body.classList.add('idle');
+                statusText.innerText = 'SCAN ABORTED. RE-AUTHENTICATION REQUIRED.';
+            };
+
+            const completeScan = () => {
+                isScanning = false;
+                body.classList.remove('scanning');
+                body.classList.add('authorized');
+                statusText.innerText = 'IDENTITY CONFIRMED. SYSTEM UNLOCKED.';
+                
+                setTimeout(() => {
+                    authOverlay.classList.remove('hidden');
+                    setTimeout(() => authOverlay.classList.add('visible'), 50);
+                }, 800);
+            };
+
+            // Touch and Mouse Interaction
+            scanner.addEventListener('mousedown', startScan);
+            scanner.addEventListener('touchstart', (e) => { 
+                e.preventDefault(); 
+                startScan(); 
+            }, { passive: false });
+
+            window.addEventListener('mouseup', cancelScan);
+            window.addEventListener('touchend', cancelScan);
+
+            // App Controls (Reset, Fullscreen)
+            const resetApp = () => {
+                body.classList.remove('authorized', 'scanning');
+                body.classList.add('idle');
+                authOverlay.classList.remove('visible');
+                setTimeout(() => authOverlay.classList.add('hidden'), 1000);
+                statusText.innerText = 'WAITING FOR BIOMETRIC SCAN...';
+            };
+
+            document.addEventListener('keydown', (e) => {
+                const key = e.key.toLowerCase();
+                // F for Fullscreen
+                if (key === 'f') {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else if (document.exitFullscreen) document.exitFullscreen();
+                }
+                // R for Reset
+                if (key === 'r') resetApp();
+            });
+            
+            // Hidden corner reset (Top Left 3 clicks)
+            let cornerClicks = 0;
+            const cornerZone = document.createElement('div');
+            cornerZone.style.cssText = 'position:fixed;top:0;left:0;width:100px;height:100px;z-index:9999;';
+            document.body.appendChild(cornerZone);
+            cornerZone.addEventListener('click', () => {
+                cornerClicks++;
+                if (cornerClicks >= 3) {
+                    resetApp();
+                    cornerClicks = 0;
+                }
+                setTimeout(() => { cornerClicks = 0; }, 3000);
+            });
+        });
+    </script>
+    <div id="reset-hint">F: FULLSCREEN | R: RESET</div>
+</body>
+</html>
