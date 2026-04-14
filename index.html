@@ -111,7 +111,7 @@
         .hand-image {
             width: 100%; height: 100%;
             object-fit: contain;
-            transform: scale(1.25); /* Zoom in on the hand itself */
+            transform: scale(1.0); /* Reduced scale to show full handprint */
             /* Screen mode moved to container for proper alpha handling */
             filter: contrast(15) brightness(0.65) grayscale(1) drop-shadow(0 0 20px var(--accent-blue));
             opacity: 0.95;
@@ -130,7 +130,7 @@
         body.scanning .scan-bar { opacity: 1; animation: scan 3.5s linear infinite; }
         body.scanning .scanner-ring { animation-duration: 4s; border-color: var(--accent-blue); }
         body.scanning .scanner-wrap { transform: scale(1.25); }
-        body.scanning .hand-image { transform: scale(1.35); opacity: 1; filter: brightness(1.7) contrast(1.5) drop-shadow(0 0 45px var(--accent-blue)); }
+        body.scanning .hand-image { transform: scale(1.1); opacity: 1; filter: brightness(1.7) contrast(1.5) drop-shadow(0 0 45px var(--accent-blue)); }
 
         body.authorized { --accent-blue: var(--accent-green); --accent-blue-dim: var(--accent-green-dim); }
 
