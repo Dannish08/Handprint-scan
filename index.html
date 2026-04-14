@@ -314,6 +314,10 @@
                 authOverlay.classList.remove('visible');
                 setTimeout(() => authOverlay.classList.add('hidden'), 1000);
                 statusText.innerText = 'WAITING FOR BIOMETRIC SCAN...';
+
+                // Show UI controls again if resetting
+                document.getElementById('fs-toggle').classList.remove('hidden');
+                document.getElementById('reset-hint').classList.remove('hidden');
             };
 
             document.addEventListener('keydown', (e) => {
@@ -329,8 +333,15 @@
                     document.documentElement.requestFullscreen().catch(err => {
                         console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
                     });
+                    // Hide UI controls once fullscreen is engaged for a clean presentation
+                    document.getElementById('fs-toggle').classList.add('hidden');
+                    document.getElementById('reset-hint').classList.add('hidden');
                 } else {
-                    if (document.exitFullscreen) document.exitFullscreen();
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                        // Optional: show them back when exiting if needed, 
+                        // but user specifically asked for them to disappear.
+                    }
                 }
             };
 
