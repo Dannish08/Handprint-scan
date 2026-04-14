@@ -254,6 +254,118 @@
 
     <!-- Interface Logic -->
     <script>
+        // Web Audio API Sound Effects Engine
+        const sfx = (function() {
+            let audioCtx = null;
+            let scanOsc = null;
+            let scanLfo = null;
+            let gainNode = null;
+            
+            function init() {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            }
+
+            return {
+                startScan: function(durationMs) {
+                    init();
+                    this.stopScan();
+                    
+                    scanOsc = audioCtx.createOscillator();
+                    gainNode = audioCtx.createGain();
+                    scanLfo = audioCtx.createOscillator();
+                    
+                    scanOsc.type = 'sawtooth';
+                    scanOsc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                    scanOsc.frequency.linearRampToValueAtTime(180, audioCtx.currentTime + (durationMs/1000));
+                    
+                    scanLfo.type = 'sine';
+                    scanLfo.frequency.setValueAtTime(12, audioCtx.currentTime); // futuristic pulsing
+                    
+                    const lfoGain = audioCtx.createGain();
+                    lfoGain.gain.setValueAtTime(40, audioCtx.currentTime);
+                    
+                    scanLfo.connect(lfoGain);
+                    lfoGain.connect(scanOsc.frequency);
+                    
+                    scanOsc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.2);
+                    
+                    scanOsc.start();
+                    scanLfo.start();
+                    
+                    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime + (durationMs/1000) - 0.2);
+                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + (durationMs/1000));
+                },
+                stopScan: function() {
+                    if (scanOsc && gainNode) {
+                        try { 
+                            const now = audioCtx.currentTime;
+                            gainNode.gain.cancelScheduledValues(now);
+                            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+                            gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+                            
+                            const oldOsc = scanOsc;
+                            const oldLfo = scanLfo;
+                            setTimeout(() => { try { oldOsc.stop(); oldLfo.stop(); } catch(e){} }, 100);
+                        } catch(e){}
+                        scanOsc = null;
+                        scanLfo = null;
+                    }
+                },
+                playSuccess: function() {
+                    init();
+                    this.stopScan();
+                    
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    
+                    const now = audioCtx.currentTime;
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                    osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+                    
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+                    gain.gain.setValueAtTime(0.1, now + 0.4);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+                    
+                    osc.start();
+                    osc.stop(now + 2.0);
+                },
+                playAbort: function() {
+                    init();
+                    this.stopScan();
+                    
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    
+                    const now = audioCtx.currentTime;
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+                    
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                    
+                    osc.start();
+                    osc.stop(now + 0.4);
+                }
+            };
+        })();
+
         document.addEventListener('DOMContentLoaded', () => {
             const body = document.body;
             const scanner = document.getElementById('scanner');
@@ -272,6 +384,8 @@
                 body.classList.add('scanning');
                 statusText.innerText = 'CALIBRATING SCANNER... ANALYZING BIOMETRICS';
                 
+                sfx.startScan(scanDuration); // Play scanning audio
+                
                 scanTimeout = setTimeout(completeScan, scanDuration);
             };
 
@@ -283,6 +397,8 @@
                 body.classList.remove('scanning');
                 body.classList.add('idle');
                 statusText.innerText = 'SCAN ABORTED. RE-AUTHENTICATION REQUIRED.';
+                
+                sfx.playAbort(); // Play error audio
             };
 
             const completeScan = () => {
@@ -290,6 +406,8 @@
                 body.classList.remove('scanning');
                 body.classList.add('authorized');
                 statusText.innerText = 'IDENTITY CONFIRMED. SYSTEM UNLOCKED.';
+                
+                sfx.playSuccess(); // Play success audio
                 
                 setTimeout(() => {
                     authOverlay.classList.remove('hidden');
