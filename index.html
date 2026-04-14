@@ -163,7 +163,7 @@
         
         #reset-hint { position: fixed; bottom: 20px; right: 20px; font-size: 0.7rem; color: var(--accent-blue-dim); opacity: 0.2; }
         
-        .hidden { display: none; }
+        .hidden { display: none !important; }
 
         /* Fullscreen Button Styles */
         .fs-btn {
@@ -318,6 +318,8 @@
                 // Show UI controls again if resetting
                 document.getElementById('fs-toggle').classList.remove('hidden');
                 document.getElementById('reset-hint').classList.remove('hidden');
+                document.querySelector('.header-top').classList.remove('hidden');
+                document.querySelector('footer').classList.remove('hidden');
             };
 
             document.addEventListener('keydown', (e) => {
@@ -336,6 +338,8 @@
                     // Hide UI controls once fullscreen is engaged for a clean presentation
                     document.getElementById('fs-toggle').classList.add('hidden');
                     document.getElementById('reset-hint').classList.add('hidden');
+                    document.querySelector('.header-top').classList.add('hidden');
+                    document.querySelector('footer').classList.add('hidden');
                 } else {
                     if (document.exitFullscreen) {
                         document.exitFullscreen();
